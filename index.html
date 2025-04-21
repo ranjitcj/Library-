@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Books</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom styles to mimic shadcn's aesthetic */
+    .card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table th {
+      background: #f9fafb;
+      font-weight: 600;
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+    .input {
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      padding: 0.5rem 0.75rem;
+      width: 100%;
+      max-width: 200px;
+    }
+    .button {
+      background: #2563eb;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      border: none;
+      cursor: pointer;
+    }
+    .button:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="container mx-auto px-4 py-8">
+    <!-- Card -->
+    <div class="card">
+      <!-- Card Header -->
+      <div class="p-6 border-b border-gray-200">
+        <h1 class="text-2xl font-bold flex items-center">
+          <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+          </svg>
+          Library Books
+        </h1>
+      </div>
+      <!-- Card Content -->
+      <div class="p-6">
+        <!-- Input Form -->
+        <div class="mb-4">
+          <label for="collegeId" class="block text-sm font-medium text-gray-700 mb-1">
+            College ID
+          </label>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              id="collegeId"
+              placeholder="Enter College ID (e.g., 2302098)"
+              class="input"
+            />
+            <button onclick="fetchCollegeData()" class="button">Fetch Data</button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="hidden text-center py-4 text-gray-600">
+          Loading library data...
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden bg-red-100 text-red-800 p-4 rounded mb-4"></div>
+
+        <!-- No Data State -->
+        <div id="noData" class="hidden text-center py-4 text-gray-600">
+          No library books found for this college ID.
+        </div>
+
+        <!-- Data Table -->
+        <div id="tableContainer" class="hidden overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Issue Date</th>
+                <th>Due Date</th>
+                <th>Fine Amount</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Field configuration
+    const DISPLAY_FIELDS = ["title", "author", "issuedate", "date_due", "fine_amount"];
+    const FIELD_LABELS = {
+      title: "Title",
+      author: "Author",
+      issuedate: "Issue Date",
+      date_due: "Due Date",
+      fine_amount: "Fine Amount",
+    };
+
+    async function fetchCollegeData() {
+      const collegeId = document.getElementById("collegeId").value.trim();
+      if (!collegeId) {
+        showError("Please enter a College ID.");
+        return;
+      }
+
+      // Reset states
+      hideAllStates();
+      document.getElementById("loading").classList.remove("hidden");
+
+      try {
+        const response = await fetch(
+          `https://script.google.com/macros/s/AKfycbxojuwqnSByix7wsxsTT74iYB9E1m64k-SO5gUbA1sak27gYKUSBioFkL0WxFcBYElzpQ/exec?college_id=${collegeId}`
+        );
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+          if (data.data && data.data.length > 0) {
+            renderTable(data.data);
+          } else {
+            document.getElementById("noData").classList.remove("hidden");
+          }
+        } else {
+          throw new Error(data.data || "Failed to fetch college data");
+        }
+      } catch (err) {
+        showError(err.message || "An unknown error occurred");
+      } finally {
+        document.getElementById("loading").classList.add("hidden");
+      }
+    }
+
+    function renderTable(data) {
+      const tableBody = document.getElementById("tableBody");
+      tableBody.innerHTML = ""; // Clear existing rows
+
+      data.forEach((record) => {
+        const row = document.createElement("tr");
+        DISPLAY_FIELDS.forEach((field) => {
+          const cell = document.createElement("td");
+          cell.textContent = field === "fine_amount" ? `₹${record[field] || "0"}` : String(record[field] || "");
+          row.appendChild(cell);
+        });
+        tableBody.appendChild(row);
+      });
+
+      document.getElementById("tableContainer").classList.remove("hidden");
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById("error");
+      errorDiv.textContent = message;
+      errorDiv.classList.remove("hidden");
+    }
+
+    function hideAllStates() {
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("error").classList.add("hidden");
+      document.getElementById("noData").classList.add("hidden");
+      document.getElementById("tableContainer").classList.add("hidden");
+    }
+  </script>
+</body>
+  </html>
